@@ -36,7 +36,7 @@ def layer_ablation(model, tokenizer, layer_to_ablate, prompt):
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
-        generated_ids = model.generate(inputs.input_ids, max_new_tokens=30)
+        generated_ids = model.generate(inputs.input_ids, max_new_tokens=1024)
         response = tokenizer.decode(generated_ids[0][inputs.input_ids.shape[-1]:], skip_special_tokens=True)
 
     if handle:
