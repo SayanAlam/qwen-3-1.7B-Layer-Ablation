@@ -44,7 +44,7 @@ def extract_features(prompts, batch_size=5, use_mean_pool=True):
 
         with torch.no_grad():
             outputs = model(**tokens)
-            hidden_states = outputs.hidden_states
+            hidden_states = outputs.hidden_states[1:]
 
         attention_mask = tokens["attention_mask"].unsqueeze(-1)
 
