@@ -9,13 +9,15 @@ import numpy as np
 # Use GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load tokenizer and model from local path
+# Load tokenizer and model
 local_model_path = "/home/uom/.cache/huggingface/hub/models--Qwen--Qwen3-1.7B/snapshots/0060bc56d46589041c1048efd1a397421b1142b5"
 tokenizer = AutoTokenizer.from_pretrained(local_model_path, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(local_model_path, torch_dtype=torch.float16, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(
+    local_model_path, torch_dtype=torch.float16, device_map="auto"
+)
 model.eval()
 
-# Sample small prompt set (can replace with your real prompts)
+# Prompts
 instruction_prompts = [
     "Translate the following English sentence to French: 'Hello, how are you?'",
     "Summarize the following text in one sentence.",
@@ -46,37 +48,47 @@ reasoning_prompts = [
 all_prompts = instruction_prompts + reasoning_prompts
 y = np.array([1] * len(instruction_prompts) + [0] * len(reasoning_prompts))
 
-# Choose layer index
-layer_idx = 12
+# Storage for results
+all_acc = []
+instr_accs = []
+reason_accs = []
 
-# Get hidden states from layer 12
-X = []
-for prompt in all_prompts:
-    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
-    with torch.no_grad():
-        outputs = model(**inputs, output_hidden_states=True)
-        hidden_state = outputs.hidden_states[layer_idx]  # Get only layer 12
-        pooled = hidden_state.mean(dim=1).squeeze().cpu()
-        X.append(pooled)
+# Loop over layers 0 to 27
+for layer_idx in range(28):
+    X = []
+    for prompt in all_prompts:
+        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
+        with torch.no_grad():
+            outputs = model(**inputs, output_hidden_states=True)
+            hidden_state = outputs.hidden_states[layer_idx]  # get specific layer
+            pooled = hidden_state.mean(dim=1).squeeze().cpu()
+            X.append(pooled)
 
-X = torch.stack(X).numpy()
+    X = torch.stack(X).numpy()
+    X, y_shuffled = shuffle(X, y, random_state=42)
 
-# Shuffle data
-X, y = shuffle(X, y, random_state=42)
+    # Split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_shuffled, test_size=0.5, stratify=y_shuffled, random_state=42
+    )
 
-# Train/test split (balanced)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, stratify=y, random_state=42)
+    # Classifier
+    clf = LogisticRegression(max_iter=1000, C=0.01)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
 
-# Logistic regression with regularization
-clf = LogisticRegression(max_iter=1000, C=0.01)
-clf.fit(X_train, y_train)
-y_pred = clf.predict(X_test)
+    # Accuracies
+    acc = accuracy_score(y_test, y_pred)
+    instr_acc = accuracy_score(y_test[y_test == 1], y_pred[y_test == 1])
+    reason_acc = accuracy_score(y_test[y_test == 0], y_pred[y_test == 0])
 
-# Accuracy
-acc = accuracy_score(y_test, y_pred)
-instr_acc = accuracy_score(y_test[y_test == 1], y_pred[y_test == 1])
-reason_acc = accuracy_score(y_test[y_test == 0], y_pred[y_test == 0])
+    all_acc.append(acc)
+    instr_accs.append(instr_acc)
+    reason_accs.append(reason_acc)
 
-print(f"Layer {layer_idx} Accuracy: {acc:.4f}")
-print(f"Instruction Accuracy: {instr_acc:.4f}")
-print(f"Reasoning Accuracy: {reason_acc:.4f}")
+    print(f"Layer {layer_idx:2d} → Total: {acc:.4f}, Instruction: {instr_acc:.4f}, Reasoning: {reason_acc:.4f}")
+
+# Optional: Final summary
+print("\nSummary (Accuracies):")
+for i in range(28):
+    print(f"Layer {i:2d}: Total={all_acc[i]:.4f}, Instr_
