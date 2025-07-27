@@ -253,19 +253,17 @@ for i, X in enumerate(X_layers):
     clf = LogisticRegression(max_iter=1000)
 
     clf.fit(X_train, y_train)
-    y_probs=clf.predict_proba(X_test)[:, 1]
+    y_pred = clf.predict(X_test)
+    instr_acc = accuracy_score(y_test[y_test == 1], y_pred[y_test == 1])
+    reason_acc = accuracy_score(y_test[y_test == 0], y_pred[y_test == 0])
 
-    instr_probs=y_probs[y_test==1]
-    reaso_probs=y_probs[y_test==0]
 
-    instr_mean = instr_probs.mean()
-    reason_mean=reaso_probs.mean()
-    acc = accuracy_score(y_test, clf.predict(X_test))
+    acc = accuracy_score(y_test, y_pred)
 
     table_data["Layer"].append(i)
     table_data["Accuracy"].append(round(acc, 4))
-    table_data["Instruction Accuracy"].append(round(instr_mean, 4))
-    table_data["Reasoning Accuracy"].append(round(reason_mean, 4))
+    table_data["Instruction Accuracy"].append(round(instr_acc, 4))
+    table_data["Reasoning Accuracy"].append(round(reason_acc, 4))
 
 # Show results
 df = pd.DataFrame(table_data)
