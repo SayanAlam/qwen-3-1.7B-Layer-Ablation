@@ -4,6 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 import pandas as pd
+import numpy as np
 
 # Use GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -188,6 +189,8 @@ instruction_prompts = [
         "I am planning a trip to Japan, and I would like thee to write an itinerary for my journey in a Shakespearean style. You are not allowed to use any commas in your response.",
     ]
 
+reasoning_prompts = reasoning_prompts[:10]
+instruction_prompts = instruction_prompts[:10]
 all_prompts = instruction_prompts + reasoning_prompts
 instruction_labels = [1] * len(instruction_prompts) + [0] * len(reasoning_prompts)
 reasoning_labels = [0] * len(instruction_prompts) + [1] * len(reasoning_prompts)
@@ -203,7 +206,7 @@ def extract_features(prompts, batch_size=5, use_mean_pool=True):
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=1024  # Token length limit enforced here
+            max_length=20  # Token length limit enforced here
         ).to(device)
 
         with torch.no_grad():
@@ -237,27 +240,32 @@ X_layers = extract_features(all_prompts)
 # Train and evaluate linear probes layer-wise
 table_data = {
     "Layer": [],
+    "Accuracy": [],
     "Instruction Accuracy": [],
     "Reasoning Accuracy": []
 }
 
 for i, X in enumerate(X_layers):
     X = X.numpy()
-    X_train, X_test, y_instr_train, y_instr_test = train_test_split(X, instruction_labels, test_size=0.3, random_state=42)
-    _, _, y_reasn_train, y_reasn_test = train_test_split(X, reasoning_labels, test_size=0.3, random_state=42)
+    y = np.array([1]*len(instruction_prompts)+[0]*len(reasoning_prompts))
 
-    clf_instr = LogisticRegression(max_iter=1000)
-    clf_reasn = LogisticRegression(max_iter=1000)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, stratify=y, random_state=42)
+    clf = LogisticRegression(max_iter=1000)
 
-    clf_instr.fit(X_train, y_instr_train)
-    clf_reasn.fit(X_train, y_reasn_train)
+    clf.fit(X_train, y_train)
+    y_probs=clf.predict_proba(X_test)[:, 1]
 
-    acc_instr = accuracy_score(y_instr_test, clf_instr.predict(X_test))
-    acc_reasn = accuracy_score(y_reasn_test, clf_reasn.predict(X_test))
+    instr_probs=y_probs[y_test==1]
+    reaso_probs=y_probs[y_test==0]
+
+    instr_mean = instr_probs.mean()
+    reason_mean=reaso_probs.mean()
+    acc = accuracy_score(y_test, clf.predict(X_test))
 
     table_data["Layer"].append(i)
-    table_data["Instruction Accuracy"].append(round(acc_instr, 4))
-    table_data["Reasoning Accuracy"].append(round(acc_reasn, 4))
+    table_data["Accuracy"].append(round(acc, 4))
+    table_data["Instruction Accuracy"].append(round(instr_mean, 4))
+    table_data["Reasoning Accuracy"].append(round(reason_mean, 4))
 
 # Show results
 df = pd.DataFrame(table_data)

@@ -202,8 +202,9 @@ def compute_attention_focus(prompt_list):
         # Compute average attention across heads and tokens
         focus_by_layer = []
         for layer_attn in attentions:
-            avg_attn = layer_attn[0].mean(dim=0)  # (seq_len, seq_len)
-            focus = avg_attn.sum(dim=1).mean().item() / avg_attn.size(0)
+            attn = layer_attn[0]
+            diag_attn = torch.diagonal(attn, dim1=-2, dim2=-1)
+            focus = diag_attn.mean().item()
             focus_by_layer.append(focus)
 
         all_focus.append(focus_by_layer)
