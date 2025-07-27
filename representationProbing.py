@@ -124,10 +124,10 @@ reasoning_prompts = [
       "If 10% of x is equal to 25% of y, what is x in terms of y?",
       "What is the smallest prime number that is the sum of two other prime numbers?",
       "How many prime numbers are there between 50 and 100?",
-      "Find the number of trailing zeros in 100!"
+      "Find the number of trailing zeros in 100!",
     ]
 
-    instruction_prompts = [
+instruction_prompts = [
         "Write a poem about how I am missing my classes. The poem must have 4 sections marked with SECTION X. Finish the poem with this exact phrase: \"Can I get my money back for the classes I missed?\"",
         "Write a blog post with 400 or more words about the benefits of sleeping in a hammock.",
         "Can you help me make an advertisement for a new product? It's a diaper that's designed to be more comfortable for babies and I want the entire output in JSON format.",
@@ -184,7 +184,7 @@ reasoning_prompts = [
         "Write a blog post about interesting facts about the Dutch language. Italicize at least 2 sections in your answer with markdown, i.e. *italic text*.",
         "Write a journal entry about stress management. Your entire response should contain less than 6 sentences.",
         "Write an itinerary for a trip to India in Shakespearean style. You are not allowed to use any commas in your response.",
-        "Write a resume for a fresh high school graduate seeking their first job. Make sure to include at least one placeholder represented by square brackets, such as [address]."
+        "Write a resume for a fresh high school graduate seeking their first job. Make sure to include at least one placeholder represented by square brackets, such as [address].",
         "I am planning a trip to Japan, and I would like thee to write an itinerary for my journey in a Shakespearean style. You are not allowed to use any commas in your response.",
     ]
 
